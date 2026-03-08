@@ -57,7 +57,14 @@ resource "aws_iam_role_policy" "ec2_policy" {
         Action = [
           "s3:GetObject"
         ],
-        Resource = "${var.s3_config_bucket_arn}/*"
+        Resource = "${var.s3_config_bucket_arn}/*",
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket",
+        ],
+        Resource = "${var.s3_config_bucket_arn}"
       }
     ]
   })
@@ -115,8 +122,11 @@ resource "aws_instance" "main" {
   # Ensure these are created before the cloud init runs to avoid conflicts
   depends_on = [
     aws_cloudwatch_log_group.user_data,
-    aws_cloudwatch_log_group.syslog
   ]
+
+  tags = {
+    Name = "${var.project_name}-main"
+  }
 }
 
 resource "aws_ebs_volume" "main" {
@@ -134,9 +144,4 @@ resource "aws_volume_attachment" "ebs_att" {
 resource "aws_cloudwatch_log_group" "user_data" {
   name              = "/ec2/user-data"
   retention_in_days = 30
-}
-
-resource "aws_cloudwatch_log_group" "syslog" {
-  name              = "/ec2/syslog"
-  retention_in_days = 90
 }
