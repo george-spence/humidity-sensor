@@ -13,7 +13,8 @@ psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<-EOSQL
     CREATE TABLE sensor_readings (
         time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
         temperature DOUBLE PRECISION,
-        humidity DOUBLE PRECISION
+        humidity DOUBLE PRECISION,
+        location TEXT
     );
 
     SELECT create_hypertable('sensor_readings', 'time');

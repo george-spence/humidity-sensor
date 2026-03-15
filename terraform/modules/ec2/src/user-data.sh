@@ -109,6 +109,11 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
   -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
   -s
 
+# --- Configure Permissions ---
+# Setup permissions for Grafana
+sudo chown -R 472:472 /data/grafana/data
+sudo chown -R 472:472 /data/grafana/provisioning
+
 # --- Setup Docker ---
 sudo service docker start
 sudo systemctl enable docker

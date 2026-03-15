@@ -5,7 +5,8 @@ secrets:
     file: ${SECRETS_DIR:-/data/secrets}/mqtt_password_telegraf.txt
   db_password_postgres:
     file: ${SECRETS_DIR:-/data/secrets}/db_password_postgres.txt
-
+  db_password_grafana:
+    file: ${SECRETS_DIR:-/data/secrets}/db_password_grafana.txt
 
 services:
   mosquitto:
@@ -60,7 +61,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password_postgres
     secrets:
+      - db_password_postgres
       - db_password_telegraf
+      - db_password_grafana
     volumes:
       - ${TS_DATA_DIR:-/data/timescaledb/data}:/var/lib/postgresql/data
       - ${TS_INIT_DIR:-/data/timescaledb/init}:/docker-entrypoint-initdb.d
