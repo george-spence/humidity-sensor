@@ -77,6 +77,12 @@ variable "timescaledb_grafana_password" {
   sensitive   = true
 }
 
+variable "timescaledb_postgres_password" {
+  description = "Password for TimescaleDB admin user"
+  type        = string
+  sensitive   = true
+}
+
 # Grafana Secrets
 variable "grafana_admin_username" {
   description = "Grafana admin username"

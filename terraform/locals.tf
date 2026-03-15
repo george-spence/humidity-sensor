@@ -33,6 +33,10 @@ locals {
       value       = var.timescaledb_grafana_password
       description = "Grafana password for TimescaleDB"
     }
+    "timescale/postgres/password" = {
+      value       = var.timescaledb_postgres_password
+      description = "Admin password for TimescaleDB"
+    }
     "grafana/admin/username" = {
       value       = var.grafana_admin_username
       description = "Grafana admin username"

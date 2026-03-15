@@ -34,18 +34,6 @@ sudo mkdir -p \
   /data/grafana/data \
   /data/grafana/provisioning
 
-# --- Permissions ---
-sudo chown -R ec2-user:ec2-user /data
-sudo chmod 700 /data/secrets
-sudo chmod -R 755 /data/mosquitto
-sudo chmod -R 755 /data/telegraf
-sudo chmod -R 755 /data/timescaledb
-sudo chmod 755 /data/grafana/data
-sudo chmod 755 /data/grafana/provisioning
-# Grafana runs as uid 472
-sudo chown -R 472:472 /data/grafana/data
-sudo chown -R 472:472 /data/grafana/provisioning
-
 # --- Retrieve Secrets from SSM ---
 # Wait for IMDS to be ready
 until aws sts get-caller-identity --region ${REGION} > /dev/null 2>&1; do
@@ -59,7 +47,7 @@ get_secret() {
     --with-decryption \
     --region ${REGION} \
     --query "Parameter.Value" \
-    --output text
+    --output text | tr -d '\n'
 }
 
 # Write secrets to files for Docker
@@ -70,28 +58,25 @@ get_secret "/humidity-sensor/prod/timescale/telegraf/password" | sudo tee /data/
 get_secret "/humidity-sensor/prod/timescale/telegraf/username" | sudo tee /data/secrets/db_username_telegraf.txt > /dev/null
 get_secret "/humidity-sensor/prod/timescale/grafana/password"  | sudo tee /data/secrets/db_password_grafana.txt > /dev/null
 get_secret "/humidity-sensor/prod/timescale/grafana/username"  | sudo tee /data/secrets/db_username_grafana.txt > /dev/null
+get_secret "/humidity-sensor/prod/timescale/postgres/password" | sudo tee /data/secrets/db_password_postgres.txt > /dev/null
 get_secret "/humidity-sensor/prod/grafana/admin/password"   | sudo tee /data/secrets/grafana_admin_password.txt > /dev/null
 get_secret "/humidity-sensor/prod/grafana/admin/username"   | sudo tee /data/secrets/grafana_admin_username.txt > /dev/null
 get_secret "/humidity-sensor/prod/tailscale/auth_key"       | sudo tee /data/secrets/tailscale_auth_key.txt > /dev/null
 
-# Lock down secrets after writing
-sudo chown -R root:root /data/secrets  # make ssm-user the owner
-sudo chmod 600 /data/secrets/*
-
 # --- Generate Mosquitto Password File ---
 # Create pwfile with hashed passwords
-MQTT_SENSOR_USER=$(get_secret "/mqtt/sensor/username")
-MQTT_SENSOR_PASS=$(get_secret "/mqtt/sensor/password")
-MQTT_TELEGRAF_USER=$(get_secret "/mqtt/telegraf/username")
-MQTT_TELEGRAF_PASS=$(get_secret "/mqtt/telegraf/password")
+MQTT_SENSOR_USER=$(get_secret "/humidity-sensor/prod/mqtt/sensor/username")
+MQTT_SENSOR_PASS=$(get_secret "/humidity-sensor/prod/mqtt/sensor/password")
+MQTT_TELEGRAF_USER=$(get_secret "/humidity-sensor/prod/mqtt/telegraf/username")
+MQTT_TELEGRAF_PASS=$(get_secret "/humidity-sensor/prod/mqtt/telegraf/password")
 
 # Create empty pwfile and add users
-sudo mosquitto_passwd -b -c /data/mosquitto/config/pwfile "$MQTT_SENSOR_USER" "$MQTT_SENSOR_PASS"
+sudo mkdir -p /data/mosquitto/config
+sudo touch /data/mosquitto/config/pwfile
+sudo mosquitto_passwd -c -b /data/mosquitto/config/pwfile "$MQTT_SENSOR_USER" "$MQTT_SENSOR_PASS"
 sudo mosquitto_passwd -b /data/mosquitto/config/pwfile "$MQTT_TELEGRAF_USER" "$MQTT_TELEGRAF_PASS"
-
-# Lock down the pwfile
-sudo chown ssm-user:ssm-user /data/mosquitto/config/pwfile
-sudo chmod 600 /data/mosquitto/config/pwfile
+sudo chown 1883:1883 /data/mosquitto/config/pwfile
+sudo chmod 0700 /data/mosquitto/config/pwfile
 
 # --- Retrieve Config Files from S3 ---
 aws s3 cp s3://${S3_CONFIG_BUCKET_NAME}/cloudwatch-agent-config.json \
@@ -108,6 +93,10 @@ aws s3 cp s3://${S3_CONFIG_BUCKET_NAME}/telegraf.conf \
 
 aws s3 cp s3://${S3_CONFIG_BUCKET_NAME}/docker-compose.yml \
   /data/docker-compose.yml \
+  --region ${REGION}
+
+aws s3 cp s3://${S3_CONFIG_BUCKET_NAME}/timescale-config.sh \
+  /data/timescaledb/init/timescale-config.sh \
   --region ${REGION}
 
 # --- Setup CloudWatch Logs Agent ---
