@@ -1,3 +1,7 @@
+################################################################################
+# AWS
+################################################################################
+
 module "network" {
   source             = "./modules/network"
   project_name       = var.project_name
@@ -19,7 +23,10 @@ module "ec2" {
   project_name           = var.project_name
   environment            = var.environment
   secret_arns            = module.ssm.secret_arns
-  vpc_security_group_ids = [module.network.ec2_security_group_id]
+  vpc_security_group_ids = [
+    module.network.ec2_security_group_id,
+    module.cloudflare_ztna.cloudflare_ztna_sg_id
+  ]
   subnet_id              = module.network.subnet_id
   s3_config_bucket_arn   = module.s3_bucket.s3_bucket_arn
   s3_config_bucket_name  = module.s3_bucket.s3_bucket_id
@@ -50,4 +57,17 @@ module "s3_objects" {
   tags = {
     Sensitive = false
   }
+}
+
+################################################################################
+# Cloudflare
+################################################################################
+
+module "cloudflare_ztna" {
+  source = "./modules/cloudflare_ztna"
+
+  project_name          = var.project_name
+  environment           = var.environment
+  cloudflare_account_id = var.cloudflare_account_id
+
 }

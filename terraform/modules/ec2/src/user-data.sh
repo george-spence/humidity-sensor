@@ -61,7 +61,7 @@ get_secret "/humidity-sensor/prod/timescale/grafana/username"  | sudo tee /data/
 get_secret "/humidity-sensor/prod/timescale/postgres/password" | sudo tee /data/secrets/db_password_postgres.txt > /dev/null
 get_secret "/humidity-sensor/prod/grafana/admin/password"   | sudo tee /data/secrets/grafana_admin_password.txt > /dev/null
 get_secret "/humidity-sensor/prod/grafana/admin/username"   | sudo tee /data/secrets/grafana_admin_username.txt > /dev/null
-get_secret "/humidity-sensor/prod/tailscale/auth_key"       | sudo tee /data/secrets/tailscale_auth_key.txt > /dev/null
+get_secret "/humidity-sensor/prod/cloudflare/tunnel_secret"       | sudo tee /data/secrets/cloudflare_tunnel_secret.txt > /dev/null
 
 # --- Generate Mosquitto Password File ---
 # Create pwfile with hashed passwords
@@ -127,4 +127,6 @@ sudo chmod +x /usr/bin/docker-compose
 # --- Run docker-compose ---
 cd /data && docker-compose up -d
 
-# --- Configure Tailscale ---
+# --- Download Cloudflared Daemon ---
+
+# --- Lock Down SG ---

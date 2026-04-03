@@ -45,10 +45,6 @@ locals {
       value       = var.grafana_admin_password
       description = "Grafana admin password"
     }
-    "tailscale/auth_key" = {
-      value       = var.tailscale_auth_key
-      description = "Tailscale ephemeral auth key"
-    }
   }
 
   # --- S3 Objects ---

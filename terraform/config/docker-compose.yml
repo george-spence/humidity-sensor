@@ -94,3 +94,10 @@ services:
         awslogs-group: /ec2/docker/grafana
         awslogs-stream: "grafana-logs"
         awslogs-create-group: "true"
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.3.0
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}

@@ -64,7 +64,7 @@ resource "aws_security_group" "ec2" {
   }
 }
 
-# Outbound-only SG: required for Docker pulls, SSM, and Tailscale overlay networking
+# Outbound-only SG: required for Docker pulls, SSM
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
   security_group_id = aws_security_group.ec2.id
   cidr_ipv4         = "0.0.0.0/0"

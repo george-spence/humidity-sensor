@@ -1,4 +1,7 @@
+################################################################################
 # --- Globals ---
+################################################################################
+
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string
@@ -21,7 +24,10 @@ variable "availability_zone" {
   default     = "eu-west-2a"
 }
 
+################################################################################
 # --- SSM Parameter Store - Secrets ---
+################################################################################
+
 # MQTT Secrets - Sensor
 variable "mqtt_sensor_username" {
   description = "Username for MQTT sensor (Raspberry Pi)"
@@ -97,14 +103,23 @@ variable "grafana_admin_password" {
   sensitive   = true
 }
 
-# Tailscale
-variable "tailscale_auth_key" {
-  description = "Tailscale ephemeral auth key for EC2 instance"
+# Cloudflare
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token"
   type        = string
   sensitive   = true
 }
 
+variable "cloudflare_account_id" {
+  description = "ID of Cloudflare account"
+  type        = string
+  sensitive   = true
+}
+
+################################################################################
 # --- Network ---
+################################################################################
+
 variable "vpc_cidr" {
   description = "VPC CIDR block"
   type        = string
@@ -115,7 +130,10 @@ variable "public_subnet_cidr" {
   type        = string
 }
 
+################################################################################
 # --- S3 Config Bucket ---
+################################################################################
+
 variable "s3_config_bucket_name" {
   description = "Name of the S3 bucket holding config files"
   type        = string
