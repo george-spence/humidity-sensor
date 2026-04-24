@@ -36,15 +36,11 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
 # Cloudflare
 ################################################################################
 
-resource "random_bytes" "tunnel_secret" {
-  length = 32
-}
-
 resource "aws_ssm_parameter" "secrets" {
   name        = "/${var.project_name}/${var.environment}/cloudflare/tunnel_secret"
   description = "Cloudflared tunnel secret"
   type        = "SecureString"
-  value       = random_bytes.tunnel_secret.base64
+  value       = cloudflare_zero_trust_tunnel_cloudflared.ec2_tunnel.secret
 
   tags = {
     Name        = "Cloudflare Tunnel Secret"
@@ -52,10 +48,14 @@ resource "aws_ssm_parameter" "secrets" {
   }
 }
 
+data "cloudflare_zero_trust_tunnel_cloudflared_token" "example_zero_trust_tunnel_cloudflared_token" {
+  account_id = var.cloudflare_account_id
+  tunnel_id = cloudflare_zero_trust_tunnel_cloudflared.ec2_tunnel.id
+}
+
 resource "cloudflare_zero_trust_tunnel_cloudflared" "ec2_tunnel" {
   account_id    = var.cloudflare_account_id
-  name          = "ec2-tunnel"
-  tunnel_secret = random_bytes.tunnel_secret.base64
+  name          = "humidity-sensor-ec2-tunnel"
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared_route" "vpc" {
@@ -63,35 +63,3 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_route" "vpc" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.ec2_tunnel.id
   network    = "10.0.0.0/16"
 }
-################## TODO
-################## TO BE VALIDATED. Also need to do for_each for emails
-
-# resource "cloudflare_zero_trust_device_custom_profile" "warp_access" {
-#   account_id = var.cloudflare_account_id
-#   name       = "allow-my-email"
-#   precedence = 1
-
-#   match = "identity.email == \"you@example.com\""
-# }
-
-# resource "cloudflare_zero_trust_device_settings" "default" {
-#   account_id = var.cloudflare_account_id
-
-#   gateway_proxy_enabled              = true
-#   gateway_udp_proxy_enabled          = true
-#   root_certificate_installation_enabled = true
-# }
-
-# resource "cloudflare_zero_trust_gateway_dns_policy" "internal_dns" {
-#   account_id = var.account_id
-#   name       = "internal-app"
-#   precedence = 1
-#   action     = "allow"
-
-#   filters = ["dns"]
-#   traffic = "dns.name == \"app.internal\""
-
-#   rule_settings {
-#     override_host = "10.0.0.5"
-#   }
-# }
