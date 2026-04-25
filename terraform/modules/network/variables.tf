@@ -14,11 +14,11 @@ variable "vpc_cidr" {
 }
 
 variable "public_subnet_cidr" {
-  description = "VPC public subnet CIDR block"
+  description = "CIDR for the public subnet"
   type        = string
 }
 
 variable "availability_zone" {
-  description = "Availability zone for subnet"
+  description = "Availability zone for the subnet"
   type        = string
 }

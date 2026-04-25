@@ -4,8 +4,8 @@ output "vpc_id" {
 }
 
 output "subnet_id" {
-  description = "ID of the main subnet"
-  value       = aws_subnet.main.id
+  description = "ID of the public subnet"
+  value       = aws_subnet.public.id
 }
 
 output "ec2_security_group_id" {

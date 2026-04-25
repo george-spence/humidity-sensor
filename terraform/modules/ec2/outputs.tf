@@ -1,4 +1,4 @@
-output "main_instance_id" {
-  description = "ID of the main EC2 instance"
-  value       = aws_instance.main.id
+output "asg_name" {
+  description = "Name of the Auto Scaling Group"
+  value       = aws_autoscaling_group.main.name
 }

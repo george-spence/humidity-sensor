@@ -1,30 +1,30 @@
 terraform {
   required_providers {
     cloudflare = {
-      source  = "cloudflare/cloudflare"
+      source = "cloudflare/cloudflare"
     }
   }
 }
 
 ################################################################################
-# AWS Setup
+# AWS - Security Group
 ################################################################################
 
 resource "aws_security_group" "cloudflare_ztna_sg" {
-    name        = "cloudflare_ztna_sg"
-    description = "Allow egress to Cloudflare ZTNA IPs"
-    vpc_id      = var.vpc_id
+  name        = "cloudflare_ztna_sg"
+  description = "Allow egress to Cloudflare ZTNA IPs"
+  vpc_id      = var.vpc_id
 
-    tags = {
-        Name = "cloudflare_ztna_sg"
-    }
+  tags = {
+    Name = "cloudflare_ztna_sg"
+  }
 
-    lifecycle {
-        create_before_destroy = true
-    }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
+resource "aws_vpc_security_group_egress_rule" "cloudflare_ips" {
   for_each = toset(var.cloudflare_ips)
 
   security_group_id = aws_security_group.cloudflare_ztna_sg.id
@@ -33,33 +33,110 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
 }
 
 ################################################################################
-# Cloudflare
+# AWS - SSM Parameters
 ################################################################################
 
-resource "aws_ssm_parameter" "secrets" {
-  name        = "/${var.project_name}/${var.environment}/cloudflare/tunnel_secret"
-  description = "Cloudflared tunnel secret"
+resource "aws_ssm_parameter" "tunnel_token" {
+  name        = "/${var.project_name}/${var.environment}/cloudflare/tunnel_token"
+  description = "Cloudflared tunnel token for EC2 connector"
   type        = "SecureString"
-  value       = cloudflare_zero_trust_tunnel_cloudflared.ec2_tunnel.secret
+  value       = data.cloudflare_zero_trust_tunnel_cloudflared_token.ec2_tunnel.token
 
   tags = {
-    Name        = "Cloudflare Tunnel Secret"
+    Name        = "Cloudflare Tunnel Token"
     Environment = var.environment
   }
 }
 
-data "cloudflare_zero_trust_tunnel_cloudflared_token" "example_zero_trust_tunnel_cloudflared_token" {
-  account_id = var.cloudflare_account_id
-  tunnel_id = cloudflare_zero_trust_tunnel_cloudflared.ec2_tunnel.id
+resource "aws_ssm_parameter" "pi_service_token_client_id" {
+  name        = "/${var.project_name}/${var.environment}/cloudflare/pi_service_token_client_id"
+  description = "Cloudflare Access service token client ID for Raspberry Pi"
+  type        = "SecureString"
+  value       = cloudflare_zero_trust_access_service_token.pi.client_id
+
+  tags = {
+    Name        = "Pi Service Token Client ID"
+    Environment = var.environment
+  }
 }
 
+resource "aws_ssm_parameter" "pi_service_token_client_secret" {
+  name        = "/${var.project_name}/${var.environment}/cloudflare/pi_service_token_client_secret"
+  description = "Cloudflare Access service token client secret for Raspberry Pi"
+  type        = "SecureString"
+  value       = cloudflare_zero_trust_access_service_token.pi.client_secret
+
+  tags = {
+    Name        = "Pi Service Token Client Secret"
+    Environment = var.environment
+  }
+}
+
+################################################################################
+# Cloudflare - Tunnel
+################################################################################
+
 resource "cloudflare_zero_trust_tunnel_cloudflared" "ec2_tunnel" {
-  account_id    = var.cloudflare_account_id
-  name          = "humidity-sensor-ec2-tunnel"
+  account_id = var.cloudflare_account_id
+  name       = "${var.project_name}-ec2-tunnel"
+}
+
+data "cloudflare_zero_trust_tunnel_cloudflared_token" "ec2_tunnel" {
+  account_id = var.cloudflare_account_id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.ec2_tunnel.id
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared_route" "vpc" {
   account_id = var.cloudflare_account_id
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.ec2_tunnel.id
-  network    = "10.0.0.0/16"
+  network    = var.vpc_cidr
+}
+
+################################################################################
+# Cloudflare - Device Profiles
+################################################################################
+
+# Split tunnel in "include" mode: only VPC traffic routes through WARP.
+# Enrolled laptops access private EC2 IPs; all other traffic is direct.
+resource "cloudflare_zero_trust_device_custom_profile" "users" {
+  account_id  = var.cloudflare_account_id
+  name        = "${var.project_name}-users"
+  description = "WARP profile for authorized laptop users"
+  match       = join(" or ", [for e in var.allowed_emails : "identity.email == \"${e}\""])
+  precedence  = 10
+  enabled     = true
+
+  include = [
+    {
+      address     = var.vpc_cidr
+      description = "VPC network"
+    }
+  ]
+}
+
+# Profile for Raspberry Pi, matched by its service token identity.
+resource "cloudflare_zero_trust_device_custom_profile" "pi" {
+  account_id  = var.cloudflare_account_id
+  name        = "${var.project_name}-pi"
+  description = "WARP profile for Raspberry Pi sensor device"
+  match       = "identity.service_token_uuid == \"${cloudflare_zero_trust_access_service_token.pi.id}\""
+  precedence  = 20
+  enabled     = true
+
+  include = [
+    {
+      address     = var.vpc_cidr
+      description = "VPC network"
+    }
+  ]
+}
+
+################################################################################
+# Cloudflare - Service Token (Raspberry Pi)
+################################################################################
+
+resource "cloudflare_zero_trust_access_service_token" "pi" {
+  account_id = var.cloudflare_account_id
+  name       = "${var.project_name}-pi-service-token"
+  duration   = "8760h"
 }

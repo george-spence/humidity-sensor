@@ -116,6 +116,12 @@ variable "cloudflare_account_id" {
   sensitive   = true
 }
 
+variable "cloudflare_allowed_emails" {
+  description = "Email addresses permitted to access via WARP (stored in tfvars only)"
+  type        = list(string)
+  sensitive   = true
+}
+
 ################################################################################
 # --- Network ---
 ################################################################################

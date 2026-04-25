@@ -15,26 +15,26 @@ variable "aws_region" {
 }
 
 variable "secret_arns" {
-  description = "ARNs of SSM Parameter secrets which EC2 can access"
+  description = "ARNs of SSM parameters the instance may read"
   type        = list(string)
 }
 
 variable "vpc_security_group_ids" {
-  description = "IDs of the VPC security groups to associate"
+  description = "Security group IDs to associate with the instance"
   type        = list(string)
 }
 
 variable "subnet_id" {
-  description = "Subnet to launch the instance in"
+  description = "Private subnet to launch instances into"
   type        = string
 }
 
 variable "s3_config_bucket_arn" {
-  description = "ARN of bucket containing config files to be used by the instance"
-  type = string
+  description = "ARN of the S3 bucket containing config files"
+  type        = string
 }
 
 variable "s3_config_bucket_name" {
-  description = "Name of bucket containing config files to be used by the instance"
-  type = string
+  description = "Name of the S3 bucket containing config files"
+  type        = string
 }
