@@ -86,6 +86,7 @@ def publish_single_reading(
     hostname: str = "localhost",
     port: int = 1883,
     topic: str = "sensors/indoor",
+    qos: int = 1,
 ) -> None:
     """
     Publish a single MQTT message with sensor readings.
@@ -105,7 +106,7 @@ def publish_single_reading(
         payload = json.dumps(reading)
 
         publish.single(
-            topic=topic, payload=payload, port=port, hostname=hostname, auth=auth
+            topic=topic, payload=payload, port=port, hostname=hostname, auth=auth, qos=qos,
         )
         logger.info("Published to %s: %s", topic, payload)
     except Exception as e:
@@ -147,6 +148,7 @@ def publish_readings(
 
     sleep_interval = 60 / freq
     iteration = 0
+    qos = 1
 
     logger.info("Starting to publish readings every %.1f seconds", sleep_interval)
 
@@ -155,7 +157,7 @@ def publish_readings(
             try:
                 if debug:
                     print_reading(bme280)
-                publish_single_reading(bme280, auth, hostname, port, topic)
+                publish_single_reading(bme280, auth, hostname, port, topic, qos)
             except RuntimeError as e:
                 logger.error("Error in iteration %d: %s", iteration, e)
                 # continue despite errors

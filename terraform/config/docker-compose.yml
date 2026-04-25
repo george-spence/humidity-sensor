@@ -1,0 +1,96 @@
+secrets:
+  db_password_telegraf:
+    file: ${SECRETS_DIR:-/data/secrets}/db_password_telegraf.txt
+  mqtt_password_telegraf:
+    file: ${SECRETS_DIR:-/data/secrets}/mqtt_password_telegraf.txt
+  db_password_postgres:
+    file: ${SECRETS_DIR:-/data/secrets}/db_password_postgres.txt
+  db_password_grafana:
+    file: ${SECRETS_DIR:-/data/secrets}/db_password_grafana.txt
+
+services:
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:2
+    restart: always
+    mem_limit: "256M"
+    ports:
+      - "1883:1883"
+    volumes:
+      - ${CONFIG_DIR:-/data/mosquitto/config}/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ${CONFIG_DIR:-/data/mosquitto/config}/pwfile:/mosquitto/config/pwfile:ro
+      - ${DATA_DIR:-/data/mosquitto/data}:/mosquitto/data
+      - ${LOG_DIR:-/data/mosquitto/log}:/mosquitto/log
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ec2/docker/mosquitto
+        awslogs-stream: "mosquitto-logs"
+        awslogs-create-group: "true"
+
+  
+  telegraf:
+    container_name: telegraf
+    image: telegraf:1.35
+    restart: always
+    depends_on:
+      - mosquitto
+      - timescaledb
+    secrets:
+      - db_password_telegraf
+      - mqtt_password_telegraf
+    volumes:
+      - ${TELEGRAF_CONF:-/data/telegraf/telegraf.conf}:/etc/telegraf/telegraf.conf:ro
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ec2/docker/telegraf
+        awslogs-stream: "telegraf-logs"
+        awslogs-create-group: "true"
+
+  timescaledb:
+    container_name: timescaledb
+    image: timescale/timescaledb:2.25.0-pg17
+    restart: always
+    environment:
+      POSTGRES_DB: sensors_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password_postgres
+    secrets:
+      - db_password_postgres
+      - db_password_telegraf
+      - db_password_grafana
+    volumes:
+      - ${TS_DATA_DIR:-/data/timescaledb/data}:/var/lib/postgresql/data
+      - ${TS_INIT_DIR:-/data/timescaledb/init}:/docker-entrypoint-initdb.d
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ec2/docker/timescaledb
+        awslogs-stream: "timescale-logs"
+        awslogs-create-group: "true"
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:12.3.2
+    restart: always
+    user: "472:472"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ${GRAFANA_DATA_DIR:-/data/grafana/data}:/var/lib/grafana
+      - ${GRAFANA_PROV_DIR:-/data/grafana/provisioning}:/etc/grafana/provisioning
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ec2/docker/grafana
+        awslogs-stream: "grafana-logs"
+        awslogs-create-group: "true"

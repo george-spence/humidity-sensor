@@ -52,3 +52,14 @@ Planned improvements include:
 * Adding `sensors/outdoor` topic, with an outdoor sensor to allow temperature differential to be calculated. This will require an enclosure and modifications to the Pi.
 * Retrieving weather forecasts/ historic data from an open AI to enrich the dashboard
 * Improve the documentation in the repository, especially on setup and pre-requisites
+
+# Debugging
+## Mosquitto
+* Check that the broker and related permissions are functioning correctly
+* Setup subscriber:
+`mosquitto_sub -h localhost -p 1883 -t 'test/auth' -u 'YOUR_USER' -P 'YOUR_PASS' -v`
+
+* Publish to a test topic:
+`docker exec mosquitto mosquitto_pub -h localhost -p 1883 -t 'test/auth' -m 'hello mqtt' -u 'YOUR_USER' -P 'YOUR_PASS'`
+
+# Telegraf
