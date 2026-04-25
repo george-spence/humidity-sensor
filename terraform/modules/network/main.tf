@@ -51,13 +51,16 @@ resource "aws_route_table_association" "public" {
 }
 
 # Outbound-only group for EC2 instances; all access is via Cloudflare ZTNA.
-resource "aws_security_group" "ec2" {
-  name        = "${var.project_name}-${var.environment}-ec2-sg"
-  description = "EC2 security group - no inbound, all outbound"
+# Bootstrap SG: used only during cloud-init. Broad egress covers package installs,
+# Docker image pulls, S3/SSM/CloudWatch, and DNS/NTP. The cloud-init script
+# replaces this SG with the Cloudflare ZTNA SG as its final step.
+resource "aws_security_group" "bootstrap" {
+  name        = "${var.project_name}-${var.environment}-bootstrap-sg"
+  description = "Bootstrap only - no inbound, HTTPS/DNS/NTP outbound"
   vpc_id      = aws_vpc.main.id
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-ec2-sg"
+    Name = "${var.project_name}-${var.environment}-bootstrap-sg"
   }
 
   lifecycle {
@@ -65,14 +68,34 @@ resource "aws_security_group" "ec2" {
   }
 }
 
-resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
-  security_group_id = aws_security_group.ec2.id
+resource "aws_vpc_security_group_egress_rule" "https_ipv4" {
+  security_group_id = aws_security_group.bootstrap.id
   cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
 }
 
-resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv6" {
-  security_group_id = aws_security_group.ec2.id
+resource "aws_vpc_security_group_egress_rule" "https_ipv6" {
+  security_group_id = aws_security_group.bootstrap.id
   cidr_ipv6         = "::/0"
-  ip_protocol       = "-1"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+}
+
+resource "aws_vpc_security_group_egress_rule" "dns_udp" {
+  security_group_id = aws_security_group.bootstrap.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "udp"
+  from_port         = 53
+  to_port           = 53
+}
+
+resource "aws_vpc_security_group_egress_rule" "ntp_udp" {
+  security_group_id = aws_security_group.bootstrap.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "udp"
+  from_port         = 123
+  to_port           = 123
 }

@@ -123,3 +123,17 @@ sudo chmod +x /usr/bin/docker-compose
 # --- Run docker-compose ---
 # .env in /data supplies TUNNEL_TOKEN for the cloudflared service
 cd /data && docker-compose up -d
+
+# --- Swap to Cloudflare ZTNA security group ---
+# Bootstrap is complete; replace the broad bootstrap SG with the restricted
+# Cloudflare ZTNA SG. From this point only UDP 7844/TCP 443 to Cloudflare IPs
+# and DNS are permitted outbound.
+IMDS_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
+  http://169.254.169.254/latest/meta-data/instance-id)
+
+aws ec2 modify-instance-attribute \
+  --instance-id "$INSTANCE_ID" \
+  --groups "${CLOUDFLARE_ZTNA_SG_ID}" \
+  --region ${REGION}

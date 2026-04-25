@@ -38,3 +38,8 @@ variable "s3_config_bucket_name" {
   description = "Name of the S3 bucket containing config files"
   type        = string
 }
+
+variable "cloudflare_ztna_sg_id" {
+  description = "ID of the Cloudflare ZTNA security group to swap to after bootstrap"
+  type        = string
+}

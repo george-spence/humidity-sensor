@@ -23,13 +23,11 @@ module "ec2" {
   project_name           = var.project_name
   environment            = var.environment
   secret_arns            = module.ssm.secret_arns
-  vpc_security_group_ids = [
-    module.network.ec2_security_group_id,
-    module.cloudflare_ztna.cloudflare_ztna_sg_id,
-  ]
-  subnet_id             = module.network.subnet_id
-  s3_config_bucket_arn  = module.s3_bucket.s3_bucket_arn
-  s3_config_bucket_name = module.s3_bucket.s3_bucket_id
+  vpc_security_group_ids = [module.network.bootstrap_sg_id]
+  cloudflare_ztna_sg_id  = module.cloudflare_ztna.cloudflare_ztna_sg_id
+  subnet_id              = module.network.subnet_id
+  s3_config_bucket_arn   = module.s3_bucket.s3_bucket_arn
+  s3_config_bucket_name  = module.s3_bucket.s3_bucket_id
 }
 
 module "s3_bucket" {

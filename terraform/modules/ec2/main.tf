@@ -52,6 +52,12 @@ resource "aws_iam_role_policy" "ec2_policy" {
         Effect   = "Allow"
         Action   = ["s3:ListBucket"]
         Resource = var.s3_config_bucket_arn
+      },
+      {
+        # Allows user-data to swap from the bootstrap SG to the Cloudflare ZTNA SG.
+        Effect   = "Allow"
+        Action   = ["ec2:ModifyInstanceAttribute"]
+        Resource = "*"
       }
     ]
   })
@@ -125,10 +131,11 @@ resource "aws_launch_template" "main" {
   }
 
   user_data = base64encode(templatefile("${path.module}/src/user-data.sh", {
-    REGION                = var.aws_region
-    S3_CONFIG_BUCKET_NAME = var.s3_config_bucket_name
-    PROJECT_NAME          = var.project_name
-    ENVIRONMENT           = var.environment
+    REGION                 = var.aws_region
+    S3_CONFIG_BUCKET_NAME  = var.s3_config_bucket_name
+    PROJECT_NAME           = var.project_name
+    ENVIRONMENT            = var.environment
+    CLOUDFLARE_ZTNA_SG_ID  = var.cloudflare_ztna_sg_id
   }))
 
   tag_specifications {

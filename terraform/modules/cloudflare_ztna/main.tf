@@ -10,9 +10,11 @@ terraform {
 # AWS - Security Group
 ################################################################################
 
+# Runtime SG: replaces the bootstrap SG once cloud-init completes.
+# Only allows the egress needed for ongoing tunnel operation.
 resource "aws_security_group" "cloudflare_ztna_sg" {
   name        = "cloudflare_ztna_sg"
-  description = "Allow egress to Cloudflare ZTNA IPs"
+  description = "Runtime - Cloudflare tunnel egress only"
   vpc_id      = var.vpc_id
 
   tags = {
@@ -24,12 +26,26 @@ resource "aws_security_group" "cloudflare_ztna_sg" {
   }
 }
 
-resource "aws_vpc_security_group_egress_rule" "cloudflare_ips" {
+# UDP 7844: primary QUIC port for the cloudflared outbound tunnel connection.
+resource "aws_vpc_security_group_egress_rule" "cloudflare_udp" {
   for_each = toset(var.cloudflare_ips)
 
   security_group_id = aws_security_group.cloudflare_ztna_sg.id
   cidr_ipv4         = "${each.value}/32"
   ip_protocol       = "udp"
+  from_port         = 7844
+  to_port           = 7844
+}
+
+# TCP 7844: cloudflared fallback when UDP 7844 is unavailable.
+resource "aws_vpc_security_group_egress_rule" "cloudflare_tcp" {
+  for_each = toset(var.cloudflare_ips)
+
+  security_group_id = aws_security_group.cloudflare_ztna_sg.id
+  cidr_ipv4         = "${each.value}/32"
+  ip_protocol       = "tcp"
+  from_port         = 7844
+  to_port           = 7844
 }
 
 ################################################################################
