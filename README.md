@@ -62,7 +62,6 @@ Planned improvements include:
 * Publish to a test topic:
 `docker exec mosquitto mosquitto_pub -h localhost -p 1883 -t 'test/auth' -m 'hello mqtt' -u 'YOUR_USER' -P 'YOUR_PASS'`
 
-<<<<<<< HEAD
 ## Telegraf
 * Ensure correct permissions are available and that no files are locked down
 * Ensure there are no newline characters at end of passwords
@@ -74,6 +73,3 @@ Planned improvements include:
 ## Integration Testing
 * Send a test message:
 `docker exec mosquitto mosquitto_pub -h localhost -p 1883 -t 'sensors/indoor' -m '{"ts": 1773692061945, "temperature": 25.0, "humidity": 50.0}' -u 'YOUR_USER' -P 'YOUR_PASS'`
-=======
-# Telegraf
->>>>>>> main
