@@ -156,3 +156,102 @@ resource "cloudflare_zero_trust_access_service_token" "pi" {
   name       = "${var.project_name}-pi-service-token"
   duration   = "8760h"
 }
+
+################################################################################
+# Cloudflare - WARP Enrollment Application & Policies
+################################################################################
+
+data "cloudflare_access_application" "warp_enrollment" {
+  account_id = var.cloudflare_account_id
+  name       = "WARP"
+}
+
+# Allow the Raspberry Pi (service token) to enroll in WARP.
+resource "cloudflare_zero_trust_access_policy" "warp_enrollment_pi" {
+  account_id = var.cloudflare_account_id
+  name       = "${var.project_name}-device-enrollment-pi"
+  decision   = "non_identity"
+
+  include = [
+    {
+      service_token = {
+        token_id = cloudflare_zero_trust_access_service_token.pi.id
+      }
+    }
+  ]
+}
+
+# Allow authorized laptop users (by email) to enroll in WARP.
+resource "cloudflare_zero_trust_access_policy" "warp_enrollment_users" {
+  account_id = var.cloudflare_account_id
+  name       = "${var.project_name}-device-enrollment-users"
+  decision   = "allow"
+
+  include = [for e in var.allowed_emails : { email = { email = e } }]
+}
+
+resource "cloudflare_zero_trust_access_application" "warp_enrollment" {
+  account_id = var.cloudflare_account_id
+  name       = "WARP"
+  type       = "warp"
+
+  policies = [
+    {
+      id         = cloudflare_zero_trust_access_policy.warp_enrollment_pi.id
+      precedence = 1
+    },
+    {
+      id         = cloudflare_zero_trust_access_policy.warp_enrollment_users.id
+      precedence = 2
+    }
+  ]
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+################################################################################
+# Cloudflare - Gateway Network Policies
+################################################################################
+
+# Authorized users get unrestricted access to all VPC ports.
+# Must be evaluated before the Pi-restrict policies (lower precedence = first).
+resource "cloudflare_zero_trust_gateway_policy" "users_allow_all" {
+  account_id  = var.cloudflare_account_id
+  name        = "${var.project_name}-users-allow-all"
+  description = "Allow authorized users unrestricted VPC access"
+  enabled     = true
+  precedence  = 10
+  action      = "allow"
+  filters     = ["l4"]
+
+  traffic = join(" or ", [for e in var.allowed_emails : "identity.email == \"${e}\""])
+}
+
+# Allow the Pi to reach only port 1883 (Mosquitto MQTT over TCP).
+resource "cloudflare_zero_trust_gateway_policy" "pi_allow_mqtt" {
+  account_id  = var.cloudflare_account_id
+  name        = "${var.project_name}-pi-allow-mqtt"
+  description = "Allow Pi service token to reach Mosquitto on TCP 1883 only"
+  enabled     = true
+  precedence  = 20
+  action      = "allow"
+  filters     = ["l4"]
+
+  traffic = "net.dst.port == 1883 and identity.service_token_uuid == \"${cloudflare_zero_trust_access_service_token.pi.id}\""
+}
+
+# Block the Pi from all other VPC ports. Evaluated after the allow-1883 rule so
+# it acts as a catch-all for the Pi identity.
+resource "cloudflare_zero_trust_gateway_policy" "pi_block_other" {
+  account_id  = var.cloudflare_account_id
+  name        = "${var.project_name}-pi-block-other"
+  description = "Block Pi service token from all VPC ports except 1883"
+  enabled     = true
+  precedence  = 30
+  action      = "block"
+  filters     = ["l4"]
+
+  traffic = "identity.service_token_uuid == \"${cloudflare_zero_trust_access_service_token.pi.id}\""
+}
