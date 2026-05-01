@@ -48,6 +48,15 @@ resource "aws_vpc_security_group_egress_rule" "cloudflare_tcp" {
   to_port           = 7844
 }
 
+# Allow HTTPS outbound for SSM Session Manager
+resource "aws_vpc_security_group_egress_rule" "ssm" {
+  security_group_id = aws_security_group.cloudflare_ztna_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+}
+
 ################################################################################
 # AWS - SSM Parameters
 ################################################################################
