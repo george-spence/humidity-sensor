@@ -215,6 +215,12 @@ resource "cloudflare_zero_trust_access_application" "warp" {
 # Cloudflare - Gateway Network Policies
 ################################################################################
 
+resource "cloudflare_zero_trust_device_settings" "enable_gateway" {
+  account_id                = var.cloudflare_account_id
+  gateway_proxy_enabled     = true
+  gateway_udp_proxy_enabled = true
+}
+
 # Authorized users get unrestricted access to all VPC ports.
 # Must be evaluated before the Pi-restrict policies (lower precedence = first).
 resource "cloudflare_zero_trust_gateway_policy" "users_allow_all" {
