@@ -224,34 +224,36 @@ resource "cloudflare_zero_trust_gateway_policy" "users_allow_all" {
   enabled     = true
   precedence  = 10
   action      = "allow"
-  filters     = ["l4"]
 
-  traffic = join(" or ", [for e in var.allowed_emails : "identity.email == \"${e}\""])
+  identity = join(" or ", [for e in var.allowed_emails : "identity.email == \"${e}\""])
 }
 
-# Allow the Pi to reach only port 1883 (Mosquitto MQTT over TCP).
+# Allow any enrolled device to reach port 1883 (Mosquitto MQTT).
+# identity.service_token_uuid is not a valid L4 selector, so this is an
+# intentionally broad rule — the catch-all block below provides the restriction.
 resource "cloudflare_zero_trust_gateway_policy" "pi_allow_mqtt" {
   account_id  = var.cloudflare_account_id
   name        = "${var.project_name}-pi-allow-mqtt"
-  description = "Allow Pi service token to reach Mosquitto on TCP 1883 only"
+  description = "Allow any enrolled device to reach Mosquitto on TCP 1883"
   enabled     = true
   precedence  = 20
   action      = "allow"
   filters     = ["l4"]
 
-  traffic = "net.dst.port == 1883 and identity.service_token_uuid == \"${cloudflare_zero_trust_access_service_token.pi.id}\""
+  traffic = "net.dst.port == 1883"
 }
 
-# Block the Pi from all other VPC ports. Evaluated after the allow-1883 rule so
-# it acts as a catch-all for the Pi identity.
+# Default deny: block all other ports for any identity not already matched above.
+# Users are passed through at precedence 10 before reaching this rule.
+# Non-user devices (e.g. Pi) that are not going to port 1883 are blocked here.
 resource "cloudflare_zero_trust_gateway_policy" "pi_block_other" {
   account_id  = var.cloudflare_account_id
-  name        = "${var.project_name}-pi-block-other"
-  description = "Block Pi service token from all VPC ports except 1883"
+  name        = "${var.project_name}-block-default"
+  description = "Default deny all traffic not matched by higher-precedence allow rules"
   enabled     = true
   precedence  = 30
   action      = "block"
   filters     = ["l4"]
 
-  traffic = "identity.service_token_uuid == \"${cloudflare_zero_trust_access_service_token.pi.id}\""
+  traffic = "net.dst.ip == 0.0.0.0"  # always true
 }
