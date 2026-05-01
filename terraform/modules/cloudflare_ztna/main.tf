@@ -219,6 +219,11 @@ resource "cloudflare_zero_trust_device_settings" "enable_gateway" {
   account_id                = var.cloudflare_account_id
   gateway_proxy_enabled     = true
   gateway_udp_proxy_enabled = true
+
+  # Required due to Cloudflare provider errors
+  disable_for_time                      = 0
+  root_certificate_installation_enabled = false
+  use_zt_virtual_ip                     = false
 }
 
 # Authorized users get unrestricted access to all VPC ports.
@@ -230,8 +235,10 @@ resource "cloudflare_zero_trust_gateway_policy" "users_allow_all" {
   enabled     = true
   precedence  = 10
   action      = "allow"
+  filters     = ["l4"]
 
   identity = join(" or ", [for e in var.allowed_emails : "identity.email == \"${e}\""])
+  traffic = "net.dst.ip == 0.0.0.0"  # always true
 }
 
 # Allow any enrolled device to reach port 1883 (Mosquitto MQTT).
