@@ -70,4 +70,5 @@ module "cloudflare_ztna" {
   vpc_id                = module.network.vpc_id
   vpc_cidr              = var.vpc_cidr
   allowed_emails        = var.cloudflare_allowed_emails
+  cloudflare_team_name  = var.cloudflare_team_name
 }

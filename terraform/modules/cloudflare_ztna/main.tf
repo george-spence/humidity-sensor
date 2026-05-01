@@ -161,9 +161,10 @@ resource "cloudflare_zero_trust_access_service_token" "pi" {
 # Cloudflare - WARP Enrollment Application & Policies
 ################################################################################
 
-data "cloudflare_access_application" "warp_enrollment" {
+# https://github.com/cloudflare/terraform-provider-cloudflare/issues/6006
+data "cloudflare_zero_trust_access_applications" "warp" {
   account_id = var.cloudflare_account_id
-  name       = "WARP"
+  name     = "Warp Login App"
 }
 
 # Allow the Raspberry Pi (service token) to enroll in WARP.
@@ -190,9 +191,8 @@ resource "cloudflare_zero_trust_access_policy" "warp_enrollment_users" {
   include = [for e in var.allowed_emails : { email = { email = e } }]
 }
 
-resource "cloudflare_zero_trust_access_application" "warp_enrollment" {
+resource "cloudflare_zero_trust_access_application" "warp" {
   account_id = var.cloudflare_account_id
-  name       = "WARP"
   type       = "warp"
 
   policies = [

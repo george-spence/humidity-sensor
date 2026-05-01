@@ -122,6 +122,12 @@ variable "cloudflare_allowed_emails" {
   sensitive   = true
 }
 
+variable "cloudflare_team_name" {
+  description = "Name of the Cloudflare Zero Trust team"
+  type        = string
+  default     = null
+}
+
 ################################################################################
 # --- Network ---
 ################################################################################

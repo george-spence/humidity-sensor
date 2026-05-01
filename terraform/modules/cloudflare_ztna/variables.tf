@@ -56,3 +56,9 @@ variable "cloudflare_ips" {
     "198.41.200.23"
   ]
 }
+
+variable "cloudflare_team_name" {
+  description = "Name of the Cloudflare Zero Trust team"
+  type        = string
+  default     = null
+}
