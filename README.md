@@ -1,75 +1,130 @@
 # humidity-sensor
-A small homelab project exploring a near-real-time streaming pipeline for temperature and humidity data collected from a Raspberry Pi with Adafruit BME280 sensor. This project was built as a proof of concept and learning exercise. This README documents the initial local implementation. A cloud-hosted version (AWS + Terraform) is planned as a follow-up iteration.
+A homelab project for a near-real-time streaming pipeline for temperature and humidity data collected from a Raspberry Pi with an Adafruit BME280 sensor. Built as a proof of concept and learning exercise, spanning a local prototype and a cloud-hosted AWS deployment.
 
-Desired analytics insights included:
-* Explore house temperature and humidity across the course of a day
-* Investigate the rate of house cooling once heating was turned off in the evening
+Desired analytics insights:
+* Temperature and humidity across the course of a day
+* Rate of house cooling once heating is turned off in the evening
 * Quick lookup of internal temperature and rate of heating
 
-## Architecture 🔩
-<img width="576" height="191" alt="pipeline_schematic drawio" src="https://github.com/user-attachments/assets/1ace2d61-1e2f-4c5d-b250-02559c810812" />
+## Architecture
+<img width="576" alt="aws_pipeline_schematic" src="docs/aws_pipeline_schematic.drawio.svg" />
 
-1. **Sensor publisher (Raspberry Pi)**: Python script reads BME280 every _N_ minutes (CLI arg, default 1 minute), publishes to MQTT topic (default `sensors/indoor`)
-2. **MQTT broker**: Mosquitto in Docker on an old laptop
-3. **Ingestion**: Telegraf subscribes, tags and writes to TimescaleDB
-4. **Storage**: TimescaleDB in Docker (persistent volume)
-5. **Visualisation**: Grafana in Docker (dashboard screenshop)
+1. **Sensor publisher (Raspberry Pi)**: Python script reads BME280 every _N_ minutes and publishes to Mosquitto over the Tailscale network
+2. **EC2 (t3.micro, Amazon Linux 2)**: Runs the full stack via Docker Compose — Tailscale, Mosquitto, Telegraf, TimescaleDB, Grafana
+3. **Tailscale**: WireGuard-based overlay network connecting the Pi and EC2; the EC2 has no inbound security group rules — all access is via the tunnel
+4. **AWS supporting services**: SSM Parameter Store (secrets), S3 (config files), CloudWatch (container logs)
 
-## Dashboard Example🖥️
-<img width="2214" height="1328" alt="image" src="https://github.com/user-attachments/assets/b2244e91-a5b4-4399-86b3-3a70df0871af" />
+## Prerequisites
+* AWS account with credentials configured locally
+* Terraform >= 1.0
+* Tailscale account with an API key
+* Raspberry Pi with BME280 sensor (I2C)
 
-## Configuration ⚙️
-High-level setup steps:
-* Clone the repo onto:
-  * the Raspberry Pi (sensor publisher)
-  * the host system running Docker (broker, DB, Grafana)
-* Configure Mosquitto users, passwords and topic permissions
-* Create TimescaleDB tables (expected columns: `time`, `temperature`, `humidity`)
-* Configure Telegraf MQTT input and TimescaleDb output
-* Create and import Grafana dashboards with desired visualisations
+## Deployment
 
-Key configuration options:
-* MQTT topic: `sensors/indoor`
-* Sampling interval: configurable via Python script CLI argument
-* Broker credentials: stored locally and in .env on Pi (no secrets committed)
-* Warning logging is stored on the Pi
+### 1. Bootstrap (first time only)
+The bootstrap module creates the Terraform state bucket and lock table:
+```bash
+cd terraform/bootstrap
+terraform init && terraform apply
+```
 
-## Limitations of the Current Design ⚠️
-This implementation is intentionally simple and has several known limitations:
-* MQTT broker, database and Grafana require a local laptop to remain online
-* Grafana is only accessible within the local network
-* Logs and metrics are fragmented across the laptop and Raspberry Pi
-* No TLS encryption on MQTT as this is a LAN-only setup
+### 2. Deploy infrastructure
+```bash
+cd terraform
+terraform init
+terraform apply -var-file="terraform.tfvars.prod"
+```
 
-## Future Plans 🔮
-Planned improvements include:
-* Migrating the pipeline to AWS using Terraform
-* Eliminating the always-on local laptop dependency
-* Private, remote access to Grafana
-* Centralised logging and monitoring
-* Improved MQTT security (TLS, stronger isolation)
-* Tracking and visualising rate of evening temperature drop (with detailed statistics0
-* Adding `sensors/outdoor` topic, with an outdoor sensor to allow temperature differential to be calculated. This will require an enclosure and modifications to the Pi.
-* Retrieving weather forecasts/ historic data from an open AI to enrich the dashboard
-* Improve the documentation in the repository, especially on setup and pre-requisites
+Terraform provisions: VPC, EC2 ASG, EBS volume, S3 config bucket, SSM secrets, CloudWatch log groups, Tailscale auth key.
 
-# Debugging
-## Mosquitto
-* Check that the broker and related permissions are functioning correctly
-* Setup subscriber:
-`mosquitto_sub -h localhost -p 1883 -t 'test/auth' -u 'YOUR_USER' -P 'YOUR_PASS' -v`
+The EC2 user-data script runs on first boot: mounts the EBS volume, pulls secrets from SSM, downloads config from S3, and starts Docker Compose.
 
-* Publish to a test topic:
-`docker exec mosquitto mosquitto_pub -h localhost -p 1883 -t 'test/auth' -m 'hello mqtt' -u 'YOUR_USER' -P 'YOUR_PASS'`
+### 3. Configure the Pi
+Copy `pi.env.example` to `pi.env` and fill in credentials:
+```
+MQTT_USER=<sensor mqtt username>
+MQTT_PASSWORD=<sensor mqtt password>
+```
 
-## Telegraf
-* Ensure correct permissions are available and that no files are locked down
-* Ensure there are no newline characters at end of passwords
+Install dependencies:
+```bash
+pip install -r pi/requirements.txt
+```
 
-## TimescaleDB
-* Check that table has been created successfully with correct schema
-* Ensure that all secrets have been bound and added correctly
+Run the publisher (once both devices are enrolled in Tailscale):
+```bash
+python pi/read_bme280.py --hostname humidity-sensor-ec2 --freq 1
+```
 
-## Integration Testing
-* Send a test message:
-`docker exec mosquitto mosquitto_pub -h localhost -p 1883 -t 'sensors/indoor' -m '{"ts": 1773692061945, "temperature": 25.0, "humidity": 50.0}' -u 'YOUR_USER' -P 'YOUR_PASS'`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--hostname` | `localhost` | MQTT broker hostname or Tailscale name |
+| `--freq` | `1` | Readings per minute (1–60) |
+| `--port` | `1883` | MQTT port |
+| `--topic` | `sensors/indoor` | MQTT topic |
+| `--debug` | off | Print readings to stdout |
+| `--log-file` | `warnings.log` | File for WARNING+ logs |
+
+## Accessing Grafana
+Once both devices are enrolled in Tailscale:
+```
+http://humidity-sensor-ec2:3000
+```
+Log in with the `grafana/admin/username` and `grafana/admin/password` values from SSM. Configure a PostgreSQL datasource pointing at `timescaledb:5432`, database `sensors_db`.
+
+## Secrets
+All secrets are passed as Terraform variables and stored in SSM Parameter Store. The required variables are:
+
+| Variable | Description |
+|----------|-------------|
+| `mqtt_sensor_password` | Pi publisher MQTT password |
+| `mqtt_telegraf_password` | Telegraf MQTT subscriber password |
+| `timescaledb_telegraf_password` | Telegraf DB password |
+| `timescaledb_grafana_password` | Grafana DB password |
+| `timescaledb_postgres_password` | TimescaleDB admin password |
+| `grafana_admin_password` | Grafana admin password |
+| `tailscale_api_key` | Tailscale API key |
+| `tailnet_domain` | Tailscale tailnet domain |
+
+## Debugging
+
+### Check container logs
+```bash
+docker logs mosquitto
+docker logs telegraf
+docker logs timescaledb
+docker logs grafana
+docker logs tailscale
+```
+
+### Mosquitto — verify broker auth
+```bash
+# Subscribe
+mosquitto_sub -h localhost -p 1883 -t 'test/auth' -u 'YOUR_USER' -P 'YOUR_PASS' -v
+
+# Publish
+docker exec mosquitto mosquitto_pub -h localhost -p 1883 -t 'test/auth' -m 'hello mqtt' -u 'YOUR_USER' -P 'YOUR_PASS'
+```
+
+### Integration test — inject a sensor reading end-to-end
+```bash
+docker exec mosquitto mosquitto_pub \
+  -h localhost -p 1883 \
+  -t 'sensors/indoor' \
+  -m '{"ts": 1773692061945, "temperature": 25.0, "humidity": 50.0}' \
+  -u 'YOUR_USER' -P 'YOUR_PASS'
+```
+
+### Telegraf
+* Ensure no trailing newline characters in secret files
+* Check that Telegraf can reach both `mosquitto` and `timescaledb` by container name
+
+### TimescaleDB
+* Verify the init script ran and the schema exists
+* Confirm secret files are mounted and readable
+
+## Future Plans
+* Visualising rate of evening temperature drop with statistics
+* Adding `sensors/outdoor` topic with an outdoor sensor and enclosure
+* Enriching the dashboard with weather forecast or historic data
