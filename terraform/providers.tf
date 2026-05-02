@@ -16,6 +16,7 @@ terraform {
     region         	   = "eu-west-2"
     encrypt        	   = true
     dynamodb_table     = "terraform-state-locks"
+    use_lockfile       = true
   }
 
   required_version = ">=1.14"
