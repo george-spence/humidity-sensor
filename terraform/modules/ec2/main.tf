@@ -125,20 +125,20 @@ resource "aws_launch_template" "main" {
   }
 
   user_data = base64encode(templatefile("${path.module}/src/user-data.sh", {
-    REGION                 = var.aws_region
-    S3_CONFIG_BUCKET_NAME  = var.s3_config_bucket_name
-    PROJECT_NAME           = var.project_name
-    ENVIRONMENT            = var.environment
+    REGION                = var.aws_region
+    S3_CONFIG_BUCKET_NAME = var.s3_config_bucket_name
+    PROJECT_NAME          = var.project_name
+    ENVIRONMENT           = var.environment
   }))
 
   tag_specifications {
     resource_type = "instance"
-    tags = { Name = "${var.project_name}-main" }
+    tags          = { Name = "${var.project_name}-main" }
   }
 
   tag_specifications {
     resource_type = "volume"
-    tags = { Name = "${var.project_name}-data" }
+    tags          = { Name = "${var.project_name}-data" }
   }
 
   depends_on = [aws_cloudwatch_log_group.user_data]
