@@ -7,6 +7,10 @@ secrets:
     file: ${SECRETS_DIR:-/data/secrets}/db_password_postgres.txt
   db_password_grafana:
     file: ${SECRETS_DIR:-/data/secrets}/db_password_grafana.txt
+  grafana_admin_username:
+    file: ${SECRETS_DIR:-/data/secrets}/grafana_admin_username.txt
+  grafana_admin_password:
+    file: ${SECRETS_DIR:-/data/secrets}/grafana_admin_password.txt
 
 services:
   tailscale:
@@ -109,6 +113,12 @@ services:
     user: "472:472"
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER__FILE=/run/secrets/grafana_admin_username
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
+    secrets:
+      - grafana_admin_username
+      - grafana_admin_password
     volumes:
       - ${GRAFANA_DATA_DIR:-/data/grafana/data}:/var/lib/grafana
       - ${GRAFANA_PROV_DIR:-/data/grafana/provisioning}:/etc/grafana/provisioning
