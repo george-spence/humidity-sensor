@@ -14,6 +14,9 @@ Desired analytics insights:
 3. **Tailscale**: WireGuard-based overlay network connecting the Pi and EC2; the EC2 has no inbound security group rules — all access is via the tunnel
 4. **AWS supporting services**: SSM Parameter Store (secrets), S3 (config files), CloudWatch (container logs)
 
+## Dashboard Example
+<img src=docs/dashboard_example.png>
+
 ## Prerequisites
 * AWS account with credentials configured locally
 * Terraform >= 1.0
