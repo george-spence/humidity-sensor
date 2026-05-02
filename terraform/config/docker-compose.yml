@@ -11,7 +11,7 @@ secrets:
 services:
   tailscale:
     container_name: tailscale
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale:1.96.5
     hostname: humidity-sensor-ec2
     environment:
       - TS_AUTHKEY=${TAILNET_KEY}
