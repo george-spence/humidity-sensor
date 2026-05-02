@@ -56,19 +56,3 @@ module "s3_objects" {
     Sensitive = false
   }
 }
-
-################################################################################
-# Cloudflare
-################################################################################
-
-module "cloudflare_ztna" {
-  source = "./modules/cloudflare_ztna"
-
-  project_name          = var.project_name
-  environment           = var.environment
-  cloudflare_account_id = var.cloudflare_account_id
-  vpc_id                = module.network.vpc_id
-  vpc_cidr              = var.vpc_cidr
-  allowed_emails        = var.cloudflare_allowed_emails
-  cloudflare_team_name  = var.cloudflare_team_name
-}

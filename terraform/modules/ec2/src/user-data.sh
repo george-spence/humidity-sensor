@@ -64,12 +64,12 @@ get_secret "$SSM_PREFIX/timescale/postgres/password" | sudo tee /data/secrets/db
 get_secret "$SSM_PREFIX/grafana/admin/password"      | sudo tee /data/secrets/grafana_admin_password.txt   > /dev/null
 get_secret "$SSM_PREFIX/grafana/admin/username"      | sudo tee /data/secrets/grafana_admin_username.txt   > /dev/null
 
-# Write the Cloudflare tunnel token to .env so docker-compose can inject it
-# into the cloudflared container as TUNNEL_TOKEN.
-TUNNEL_TOKEN=$(get_secret "$SSM_PREFIX/cloudflare/tunnel_token")
-echo "TUNNEL_TOKEN=$TUNNEL_TOKEN" | sudo tee /data/.env > /dev/null
-sudo chmod 600 /data/.env
-unset TUNNEL_TOKEN
+# Write the Tailscale tailnet key to .env so docker-compose can inject it
+# into the Tailscale container as TAILNET_KEY.
+# TAILNET_KEY=$(get_secret "$SSM_PREFIX/tailscale/tailnet_key")
+# echo "TAILNET_KEY=$TAILNET_KEY" | sudo tee /data/.env > /dev/null
+# sudo chmod 600 /data/.env
+# unset TAILNET_KEY
 
 # --- Generate Mosquitto Password File ---
 MQTT_SENSOR_USER=$(get_secret "$SSM_PREFIX/mqtt/sensor/username")
@@ -123,17 +123,3 @@ sudo chmod +x /usr/bin/docker-compose
 # --- Run docker-compose ---
 # .env in /data supplies TUNNEL_TOKEN for the cloudflared service
 cd /data && docker-compose up -d
-
-# --- Swap to Cloudflare ZTNA security group ---
-# Bootstrap is complete; replace the broad bootstrap SG with the restricted
-# Cloudflare ZTNA SG. From this point only UDP 7844/TCP 443 to Cloudflare IPs
-# and DNS are permitted outbound.
-IMDS_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
-  -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
-INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
-  http://169.254.169.254/latest/meta-data/instance-id)
-
-aws ec2 modify-instance-attribute \
-  --instance-id "$INSTANCE_ID" \
-  --groups "${CLOUDFLARE_ZTNA_SG_ID}" \
-  --region ${REGION}

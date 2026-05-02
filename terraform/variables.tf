@@ -103,31 +103,6 @@ variable "grafana_admin_password" {
   sensitive   = true
 }
 
-# Cloudflare
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token"
-  type        = string
-  sensitive   = true
-}
-
-variable "cloudflare_account_id" {
-  description = "ID of Cloudflare account"
-  type        = string
-  sensitive   = true
-}
-
-variable "cloudflare_allowed_emails" {
-  description = "Email addresses permitted to access via WARP (stored in tfvars only)"
-  type        = list(string)
-  sensitive   = true
-}
-
-variable "cloudflare_team_name" {
-  description = "Name of the Cloudflare Zero Trust team"
-  type        = string
-  default     = null
-}
-
 ################################################################################
 # --- Network ---
 ################################################################################

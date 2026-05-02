@@ -135,7 +135,6 @@ resource "aws_launch_template" "main" {
     S3_CONFIG_BUCKET_NAME  = var.s3_config_bucket_name
     PROJECT_NAME           = var.project_name
     ENVIRONMENT            = var.environment
-    CLOUDFLARE_ZTNA_SG_ID  = var.cloudflare_ztna_sg_id
   }))
 
   tag_specifications {
