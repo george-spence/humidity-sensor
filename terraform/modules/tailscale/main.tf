@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "~>0.28.0"
+    }
+  }
+}
+
 resource "tailscale_tailnet_key" "ec2" {
   reusable      = true
   ephemeral     = false
