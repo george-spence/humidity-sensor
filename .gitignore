@@ -48,7 +48,7 @@ mosquitto/config/pwfile
 grafana/data
 __pycache__/
 *.drawio
-*.drawio.*
+*.drawio.
 
 # --- Python ---
 # Byte-compiled / optimized / DLL files
