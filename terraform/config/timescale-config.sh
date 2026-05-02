@@ -25,5 +25,5 @@ psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<-EOSQL
 
     GRANT CONNECT ON DATABASE sensors_db TO grafana;
     GRANT USAGE ON SCHEMA public TO grafana;
-    GRANT INSERT ON sensor_readings TO grafana;
+    GRANT SELECT ON sensor_readings TO grafana;
 EOSQL
