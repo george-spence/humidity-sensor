@@ -9,6 +9,6 @@ output "subnet_id" {
 }
 
 output "bootstrap_sg_id" {
-  description = "ID of the bootstrap security group (broad egress for cloud-init only)"
+  description = "ID of the EC2 security group (no inbound; outbound for Tailscale, SSM, Docker, S3, DNS, NTP)"
   value       = aws_security_group.bootstrap.id
 }

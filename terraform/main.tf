@@ -1,4 +1,14 @@
 ################################################################################
+# Tailscale
+################################################################################
+
+module "tailscale" {
+  source       = "./modules/tailscale"
+  project_name = var.project_name
+  environment  = var.environment
+}
+
+################################################################################
 # AWS
 ################################################################################
 
@@ -22,9 +32,8 @@ module "ec2" {
   source                 = "./modules/ec2"
   project_name           = var.project_name
   environment            = var.environment
-  secret_arns            = module.ssm.secret_arns
+  secret_arns            = concat(module.ssm.secret_arns, [module.tailscale.ssm_parameter_arn])
   vpc_security_group_ids = [module.network.bootstrap_sg_id]
-  cloudflare_ztna_sg_id  = module.cloudflare_ztna.cloudflare_ztna_sg_id
   subnet_id              = module.network.subnet_id
   s3_config_bucket_arn   = module.s3_bucket.s3_bucket_arn
   s3_config_bucket_name  = module.s3_bucket.s3_bucket_id

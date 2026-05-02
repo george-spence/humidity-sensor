@@ -53,12 +53,6 @@ resource "aws_iam_role_policy" "ec2_policy" {
         Action   = ["s3:ListBucket"]
         Resource = var.s3_config_bucket_arn
       },
-      {
-        # Allows user-data to swap from the bootstrap SG to the Cloudflare ZTNA SG.
-        Effect   = "Allow"
-        Action   = ["ec2:ModifyInstanceAttribute"]
-        Resource = "*"
-      }
     ]
   })
 }

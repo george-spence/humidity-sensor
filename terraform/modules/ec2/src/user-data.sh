@@ -64,12 +64,12 @@ get_secret "$SSM_PREFIX/timescale/postgres/password" | sudo tee /data/secrets/db
 get_secret "$SSM_PREFIX/grafana/admin/password"      | sudo tee /data/secrets/grafana_admin_password.txt   > /dev/null
 get_secret "$SSM_PREFIX/grafana/admin/username"      | sudo tee /data/secrets/grafana_admin_username.txt   > /dev/null
 
-# Write the Tailscale tailnet key to .env so docker-compose can inject it
-# into the Tailscale container as TAILNET_KEY.
-# TAILNET_KEY=$(get_secret "$SSM_PREFIX/tailscale/tailnet_key")
-# echo "TAILNET_KEY=$TAILNET_KEY" | sudo tee /data/.env > /dev/null
-# sudo chmod 600 /data/.env
-# unset TAILNET_KEY
+# Write the Tailscale auth key to .env so docker-compose can inject it
+# into the Tailscale container as TS_AUTHKEY.
+TAILNET_KEY=$(get_secret "$SSM_PREFIX/tailscale/tailnet_key")
+echo "TAILNET_KEY=$TAILNET_KEY" | sudo tee /data/.env > /dev/null
+sudo chmod 600 /data/.env
+unset TAILNET_KEY
 
 # --- Generate Mosquitto Password File ---
 MQTT_SENSOR_USER=$(get_secret "$SSM_PREFIX/mqtt/sensor/username")
@@ -121,5 +121,5 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/bin/docker-compose
 
 # --- Run docker-compose ---
-# .env in /data supplies TUNNEL_TOKEN for the cloudflared service
+# .env in /data supplies TAILNET_KEY for the Tailscale container
 cd /data && docker-compose up -d

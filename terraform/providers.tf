@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~>6.30.0"
     }
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "~>0.28.0"
+    }
   }
 
   backend "s3" {
@@ -28,4 +32,9 @@ provider "aws" {
       Project     = "humidity-sensor"
     }
   }
+}
+
+provider "tailscale" {
+  api_key = var.tailscale_api_key
+  tailnet = var.tailnet_domain
 }

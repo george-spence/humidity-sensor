@@ -118,6 +118,21 @@ variable "public_subnet_cidr" {
 }
 
 ################################################################################
+# --- Tailscale ---
+################################################################################
+
+variable "tailscale_api_key" {
+  description = "Tailscale API access token (generated from the Tailscale admin console Keys page)"
+  type        = string
+  sensitive   = true
+}
+
+variable "tailnet_domain" {
+  description = "Tailscale tailnet domain (e.g. example.com or example.github)"
+  type        = string
+}
+
+################################################################################
 # --- S3 Config Bucket ---
 ################################################################################
 

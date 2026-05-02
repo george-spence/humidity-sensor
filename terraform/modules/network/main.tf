@@ -1,6 +1,6 @@
 # Networking: VPC, public subnet, internet gateway, and security groups.
 # The EC2 ASG runs in the public subnet with a public IP but no inbound
-# security group rules — all access is via the Cloudflare ZTNA tunnel.
+# security group rules — all access is via the Tailscale tunnel.
 
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -50,17 +50,16 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.main.id
 }
 
-# Outbound-only group for EC2 instances; all access is via Cloudflare ZTNA.
-# Bootstrap SG: used only during cloud-init. Broad egress covers package installs,
-# Docker image pulls, S3/SSM/CloudWatch, and DNS/NTP. The cloud-init script
-# replaces this SG with the Cloudflare ZTNA SG as its final step.
+# Outbound-only group for EC2 instances; all access is via Tailscale.
+# Covers package installs, Docker image pulls, S3/SSM/CloudWatch, DNS/NTP,
+# and Tailscale control plane / direct WireGuard connections.
 resource "aws_security_group" "bootstrap" {
-  name        = "${var.project_name}-${var.environment}-bootstrap-sg"
-  description = "Bootstrap only - no inbound, HTTPS/DNS/NTP outbound"
+  name        = "${var.project_name}-${var.environment}-sg"
+  description = "No inbound; outbound for Tailscale, SSM, Docker, S3, DNS, NTP"
   vpc_id      = aws_vpc.main.id
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-bootstrap-sg"
+    Name = "${var.project_name}-${var.environment}-sg"
   }
 
   lifecycle {
@@ -98,4 +97,12 @@ resource "aws_vpc_security_group_egress_rule" "ntp_udp" {
   ip_protocol       = "udp"
   from_port         = 123
   to_port           = 123
+}
+
+resource "aws_vpc_security_group_egress_rule" "tailscale_udp" {
+  security_group_id = aws_security_group.bootstrap.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "udp"
+  from_port         = 41641
+  to_port           = 41641
 }
