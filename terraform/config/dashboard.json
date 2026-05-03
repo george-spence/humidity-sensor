@@ -79,7 +79,7 @@
         "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -95,7 +95,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT temperature FROM sensor_readings LIMIT 50",
+          "rawSql": "SELECT temperature FROM sensor_readings ORDER BY TIME DESC LIMIT 1",
           "refId": "A",
           "sql": {
             "columns": [
@@ -180,9 +180,10 @@
       "targets": [
         {
           "dataset": "sensors_db",
-          "editorMode": "builder",
+          "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT humidity FROM sensor_readings LIMIT 50 ",
+          "rawQuery": true,
+          "rawSql": "SELECT humidity FROM sensor_readings ORDER BY time DESC LIMIT 1;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -678,12 +679,12 @@
     "list": []
   },
   "time": {
-    "from": "2026-05-02T11:18:43.934Z",
-    "to": "2026-05-05T03:18:43.934Z"
+    "from": "2026-05-01T03:18:43.934Z",
+    "to": "2026-05-06T11:18:43.934Z"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "Humidity Sensor Dashboard",
   "uid": "adqfg4b",
-  "version": 5
+  "version": 6
 }
