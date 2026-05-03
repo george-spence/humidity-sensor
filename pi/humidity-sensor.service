@@ -1,12 +1,13 @@
 [Unit]
 Description=Humidity sensor service
-After=multi-user.target
-Requires=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=idle
-User=shimon
-ExecStart=/usr/bin/python3
+Type=simple
+User=<USER>
+WorkingDirectory=/home/<USER>/humidity-sensor
+ExecStart=/home/<USER>>/.local/bin/uv run --no-project --with-requirements /home/<USER>/humidity-sensor/pi/requirements.txt python /home/<USER>/humidity-sensor/pi/read_bme280.py --hostname humidity-sensor-ec2 --freq 1
 Restart=always
 RestartSec=60
 
